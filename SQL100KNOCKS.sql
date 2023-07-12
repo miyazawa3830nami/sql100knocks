@@ -180,3 +180,37 @@ ORDER BY stds_amount DESC
 LIMIT 5;
     -- 調べて取り組んだが、回答時は標本標準偏差「STDDEV_SAMP」を使用してしまい間違い
     -- 問題文に「レシート明細データ（receipt）に対し」と明記されているから、母標準偏差を使用？？
+
+-- S-032: レシート明細データ（receipt）の売上金額（amount）について、25％刻みでパーセンタイル値を求めよ。
+SELECT
+    PERCENTILE_CONT(0.25) WITHIN GROUP(ORDER BY amount) AS amount_25per,
+    PERCENTILE_CONT(0.50) WITHIN GROUP(ORDER BY amount) AS amount_50per,
+    PERCENTILE_CONT(0.75) WITHIN GROUP(ORDER BY amount) AS amount_75per,
+    PERCENTILE_CONT(1.0) WITHIN GROUP(ORDER BY amount) AS amount_100per
+FROM receipt;
+    -- そもそもパーセンタイル値がわからなかったので、解答を見つつ調べつつ動かした
+
+-- S-033: レシート明細データ（receipt）に対し、店舗コード（store_cd）ごとに売上金額（amount）の平均を計算し、330以上のものを抽出せよ。
+SELECT store_cd, AVG(amount) FROM receipt
+GROUP BY store_cd HAVING AVG(amount)>=330;
+
+-- S-034: レシート明細データ（receipt）に対し、顧客ID（customer_id）ごとに売上金額（amount）を合計して全顧客の平均を求めよ。ただし、顧客IDが"Z"から始まるものは非会員を表すため、除外して計算すること。
+WITH total AS(
+SELECT customer_id, SUM(amount) AS customer_amount 
+FROM receipt GROUP BY customer_id
+)
+SELECT AVG(customer_amount) FROM total WHERE customer_id NOT LIKE 'Z%';
+    -- 解答は、顧客IDの条件をWITH句内で付けていた
+
+-- S-035: レシート明細データ（receipt）に対し、顧客ID（customer_id）ごとに売上金額（amount）を合計して全顧客の平均を求め、平均以上に買い物をしている顧客を抽出し、10件表示せよ。ただし、顧客IDが"Z"から始まるものは非会員を表すため、除外して計算すること。
+WITH total AS(
+    SELECT customer_id, SUM(amount) AS customer_amount FROM receipt
+    WHERE customer_id NOT LIKE 'Z%' GROUP BY customer_id
+),
+average AS(
+    SELECT AVG(customer_amount) AS average_amount FROM total
+)
+SELECT customer_id, customer_amount FROM total
+WHERE customer_amount>=(SELECT average_amount FROM average)
+LIMIT 10;
+    -- 解答では、WITH句１つだけで、WHEREのSELECTにAVG書いてる
