@@ -214,3 +214,14 @@ SELECT customer_id, customer_amount FROM total
 WHERE customer_amount>=(SELECT average_amount FROM average)
 LIMIT 10;
     -- 解答では、WITH句１つだけで、WHEREのSELECTにAVG書いてる
+
+-- S-036: レシート明細データ（receipt）と店舗データ（store）を内部結合し、レシート明細データの全項目と店舗データの店舗名（store_name）を10件表示せよ。
+SELECT receipt.*, store.store_name FROM receipt
+JOIN store ON receipt.store_cd=store.store_cd
+LIMIT 10;
+
+-- S-037: 商品データ（product）とカテゴリデータ（category）を内部結合し、商品データの全項目とカテゴリデータのカテゴリ小区分名（category_small_name）を10件表示せよ。
+SELECT product.*, category.category_small_name FROM product
+JOIN category
+ON product.category_small_cd=category.category_small_cd
+LIMIT 10;
