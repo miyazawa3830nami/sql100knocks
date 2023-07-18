@@ -225,3 +225,40 @@ SELECT product.*, category.category_small_name FROM product
 JOIN category
 ON product.category_small_cd=category.category_small_cd
 LIMIT 10;
+
+-- S-038: 顧客データ（customer）とレシート明細データ（receipt）から、顧客ごとの売上金額合計を求め、10件表示せよ。ただし、売上実績がない顧客については売上金額を0として表示させること。また、顧客は性別コード（gender_cd）が女性（1）であるものを対象とし、非会員（顧客IDが"Z"から始まるもの）は除外すること。
+WITH sum_amount AS 
+(SELECT customer_id, SUM(amount) total_amount
+ FROM receipt
+ GROUP BY customer_id),
+customer_list AS
+(SELECT customer_id FROM customer
+ WHERE gender_cd='1' AND customer_id <> 'Z%')
+SELECT customer_list.customer_id, COALESCE(sum_amount.total_amount,0) total_amount
+FROM customer_list
+LEFT JOIN sum_amount ON customer_list.customer_id=sum_amount.customer_id
+LIMIT 10;
+
+-- S-039: レシート明細データ（receipt）から、売上日数の多い顧客の上位20件を抽出したデータと、売上金額合計の多い顧客の上位20件を抽出したデータをそれぞれ作成し、さらにその2つを完全外部結合せよ。ただし、非会員（顧客IDが"Z"から始まるもの）は除外すること。
+WITH sales_date AS
+(SELECT customer_id, count(DISTINCT sales_ymd) count_date
+ FROM receipt
+ GROUP BY customer_id
+ HAVING customer_id NOT LIKE 'Z%'
+ ORDER BY count_date DESC
+ LIMIT 20),
+sum_amount AS 
+(SELECT customer_id, SUM(amount) total_amount
+ FROM receipt
+ GROUP BY customer_id
+ HAVING customer_id NOT LIKE 'Z%'
+ ORDER BY total_amount DESC
+ LIMIT 20)
+SELECT * FROM sales_date
+FULL JOIN sum_amount ON sales_date.customer_id=sum_amount.customer_id;
+    -- HAVING customer_id NOT LIKE 'Z%'を書いたが、解答では先にテーブルを作って制御
+    -- 売上日数のカウントが上手くできなかった、DISTINCTがわかっていなかった（解答見て付け加えた）
+
+-- S-040: 全ての店舗と全ての商品を組み合わせたデータを作成したい。店舗データ（store）と商品データ（product）を直積し、件数を計算せよ。
+SELECT COUNT(*) FROM store
+CROSS JOIN product;
