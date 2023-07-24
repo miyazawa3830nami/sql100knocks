@@ -262,3 +262,66 @@ FULL JOIN sum_amount ON sales_date.customer_id=sum_amount.customer_id;
 -- S-040: 全ての店舗と全ての商品を組み合わせたデータを作成したい。店舗データ（store）と商品データ（product）を直積し、件数を計算せよ。
 SELECT COUNT(*) FROM store
 CROSS JOIN product;
+
+-- S-041: レシート明細データ（receipt）の売上金額（amount）を日付（sales_ymd）ごとに集計し、前回売上があった日からの売上金額増減を計算せよ。そして結果を10件表示せよ。
+WITH sales_amount_by_date AS (
+    SELECT
+        sales_ymd,
+        SUM(amount) AS amount
+    FROM receipt
+    GROUP BY
+        sales_ymd
+),
+sales_amount_by_date_with_lag as (
+    SELECT
+        sales_ymd,
+        LAG(sales_ymd, 1) OVER(ORDER BY sales_ymd) lag_ymd,
+        amount,
+        LAG(amount, 1) OVER(ORDER BY sales_ymd) AS lag_amount
+    FROM sales_amount_by_date
+)
+SELECT
+    sales_ymd,
+    amount,
+    lag_ymd,
+    lag_amount,
+    amount - lag_amount AS diff_amount
+FROM sales_amount_by_date_with_lag
+ORDER BY
+    sales_ymd
+LIMIT 10;
+    -- LAG関数を知らず、回答できていなかったので、解答を見ながら挙動を確認した。
+
+-- S-042: レシート明細データ（receipt）の売上金額（amount）を日付（sales_ymd）ごとに集計し、各日付のデータに対し、前回、前々回、3回前に売上があった日のデータを結合せよ。そして結果を10件表示せよ。
+WITH sales_amount_by_date AS (
+    SELECT sales_ymd,
+        SUM(amount) AS amount
+    FROM receipt
+    GROUP BY sales_ymd
+),
+sales_amount_by_date_with_lag as (
+    SELECT sales_ymd,
+		amount,
+        LAG(sales_ymd, 1) OVER(ORDER BY sales_ymd) lag_ymd_1,
+        LAG(amount, 1) OVER(ORDER BY sales_ymd) AS lag_amount_1,
+        LAG(sales_ymd, 2) OVER(ORDER BY sales_ymd) lag_ymd_2,
+        LAG(amount, 2) OVER(ORDER BY sales_ymd) AS lag_amount_2,
+        LAG(sales_ymd, 3) OVER(ORDER BY sales_ymd) lag_ymd_3,
+        LAG(amount, 3) OVER(ORDER BY sales_ymd) AS lag_amount_3
+    FROM sales_amount_by_date
+)
+SELECT sales_ymd,
+    amount, 
+    lag_ymd_1,
+    lag_amount_1,
+    lag_ymd_2,
+    lag_amount_2,
+    lag_ymd_3,
+    lag_amount_3
+FROM sales_amount_by_date_with_lag
+WHERE lag_amount_1 IS NOT NULL
+	AND lag_amount_2 IS NOT NULL
+	AND lag_amount_3 IS NOT NULL
+ORDER BY sales_ymd
+LIMIT 10;
+    -- S-041を参考にして解いたが、何もないところからは書けなさそう。
